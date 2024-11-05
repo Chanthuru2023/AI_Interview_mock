@@ -69,10 +69,10 @@ function RecordAnswerSection({ mockInterviewQuestions, activeQuestionIndex, inte
       const blob = await (await fetch(imageData)).blob();
 
       try {
-        const response = await axios.post("http://localhost:5000/analyze", blob, {
-          headers: { "Content-Type": "application/octet-stream" },
-        });
-
+        const response = await axios.post("https://ai-interview-mock-1.onrender.com/analyze", blob, {
+        headers: { "Content-Type": "application/octet-stream" },
+         });
+        
         const { gaze_status, interview_status, num_faces, emotion } = response.data;
         setGazeStatus(gaze_status);
         setInterviewStatus(interview_status);
