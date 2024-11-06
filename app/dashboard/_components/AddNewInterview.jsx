@@ -25,7 +25,6 @@ export default function AddNewInterview() {
   const [jobDesc, setJobDesc] = useState("");
   const [jobExperience, setJobExperience] = useState("");
   const [loading, setLoading] = useState(false);
-  const [jsonResponse, setJsonResponse] = useState(null); // Ensure it's initialized to null
   const { user } = useUser();
   const router = useRouter();
 
@@ -39,52 +38,39 @@ export default function AddNewInterview() {
       // Send the prompt to the AI
       const result = await chatSession.sendMessage(InputPrompt);
       const rawResponse = await result.response.text();
-      const MockJsonResp = (result.response.text()).replace("```json", "").replace("```", "");
+      const MockJsonResp = rawResponse.replace("```json", "").replace("```", "");
 
-      /*console.log("AI Input Prompt:", InputPrompt);
-      console.log("AI Raw Response:", rawResponse);*/
-      console.log(JSON.parse(MockJsonResp));
+      console.log("AI Raw Response:", rawResponse);
 
       // Try to parse the AI response as JSON
-      try {
-        const parsedResponse = JSON.parse(MockJsonResp);
-        setJsonResponse(parsedResponse);
-      } catch (error) {
-        console.error("Error parsing JSON:", error);
-        setJsonResponse(null);
-      }
-    } catch (error) {
-      console.error("Error generating questions:", error);
-    } finally {
-      // Ensure that jsonResponse is valid and not empty
-      if (jsonResponse && Array.isArray(jsonResponse) && jsonResponse.length > 0) {
-        // Insert into the DB if the response is valid
-        try {
-          const resp = await db
-            .insert(MockInterview)
-            .values({
-              mockId: uuidv4(),
-              jsonMockResp: JSON.stringify(jsonResponse), // Save JSON as a string
-              jobPosition: jobPosition,
-              jobDesc: jobDesc,
-              jobExperience: jobExperience,
-              createdBy: user?.primaryEmailAddress?.emailAddress || "unknown",
-              createdAt: moment().format("DD-MM-YYYY"),
-            })
-            .returning({ mockId: MockInterview.mockId });
+      const parsedResponse = JSON.parse(MockJsonResp);
 
-          console.log("Inserted ID:", resp);
-          if(resp)
-        {
-            setOpenDialog(false);
-            router.push('/dashboard/interview/'+resp[0]?.mockId)
-        }
-        } catch (dbError) {
-          console.error("Error inserting into DB:", dbError);
+      // Check if parsed response is valid and insert it into the DB
+      if (parsedResponse && Array.isArray(parsedResponse) && parsedResponse.length > 0) {
+        const resp = await db
+          .insert(MockInterview)
+          .values({
+            mockId: uuidv4(),
+            jsonMockResp: JSON.stringify(parsedResponse), // Save JSON as a string
+            jobPosition: jobPosition,
+            jobDesc: jobDesc,
+            jobExperience: jobExperience,
+            createdBy: user?.primaryEmailAddress?.emailAddress || "unknown",
+            createdAt: moment().format("DD-MM-YYYY"),
+          })
+          .returning({ mockId: MockInterview.mockId });
+
+        console.log("Inserted ID:", resp);
+        if (resp) {
+          setOpenDialog(false);
+          router.push('/dashboard/interview/' + resp[0]?.mockId);
         }
       } else {
         console.log("No valid response to insert into DB.");
       }
+    } catch (error) {
+      console.error("Error generating questions or inserting into DB:", error);
+    } finally {
       setLoading(false);
     }
   };
